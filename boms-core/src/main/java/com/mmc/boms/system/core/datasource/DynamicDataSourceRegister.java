@@ -1,8 +1,10 @@
 package com.mmc.boms.system.core.datasource;
 
+import com.mmc.boms.system.core.utils.CastUtils;
 import com.mmc.boms.system.core.utils.PropertiesUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.annotation.ImportBeanDefinitionRegistrar;
 import org.springframework.core.type.AnnotationMetadata;
 
@@ -66,11 +68,23 @@ public class DynamicDataSourceRegister implements ImportBeanDefinitionRegistrar 
         /**
          * 数据源对象，如果为空，使用SpringBoot默认支持数据源
          */
-        Object dsType = map.get(DataSourceType.TYPE);
-        if (dsType == null) {
-            dsType = DATASOURCE_TYPE_DEFAULT;
-        }
+        try {
+            Object dsType = map.get(DataSourceType.TYPE);
+            if (dsType == null) {
+                dsType = DATASOURCE_TYPE_DEFAULT;
+            }
 
+            Class<? extends DataSource> dataSourceClass = (Class<? extends DataSource>) Class.forName(CastUtils.castString(dsType));
+            String driverClass = CastUtils.castString(map.get(DataSourceType.DRIVER));
+            String url = CastUtils.castString(map.get(DataSourceType.URL));
+            String userName = CastUtils.castString(map.get(DataSourceType.USERNAME));
+            String password = CastUtils.castString(map.get(DataSourceType.PASSWORD));
+            DataSource dataSource = DataSourceBuilder.create().driverClassName(driverClass).url(url).username(userName).password(password)
+                    .type(dataSourceClass).build();
+            return dataSource;
+        } catch (Exception e) {
+            log.error("build datasource error", e);
+        }
         return null;
     }
 
